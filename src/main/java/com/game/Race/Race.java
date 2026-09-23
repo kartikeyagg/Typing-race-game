@@ -18,12 +18,14 @@ public final class Race implements RaceAPIRaceServer {
             + "Every clean word sends the car forward, every second matters, and the final straight rewards the racer "
             + "who can stay calm, accurate, and fast.";
     private static final int MAX_PARTICIPANTS = 12;
+    private static final int MIN_HUMANS_TO_START = 2;
 
     private final Map<Long, User> participants = new LinkedHashMap<>();
     private final Map<Long, Integer> botSpeeds = new LinkedHashMap<>();
     private final AtomicLong ids = new AtomicLong(1000);
     private final StepperAngleConverter angleConverter;
     private String raceId = newRaceId();
+    private Long hostParticipantId;
     private long startedAt;
     private Status status = Status.WAITING;
 
@@ -35,22 +37,34 @@ public final class Race implements RaceAPIRaceServer {
     }
 
     public synchronized User join(String rawName, int color) {
+        if (status != Status.WAITING) {
+            throw new IllegalStateException("This race has already started");
+        }
         if (humanCount() >= MAX_PARTICIPANTS - botSpeeds.size()) {
             throw new IllegalStateException("This race is full");
-        }
-        if (status == Status.FINISHED) {
-            resetInternal();
         }
         String name = sanitizeName(rawName);
         User user = new User(name, ids.incrementAndGet(), color, false);
         user.onJoinRace();
         participants.put(user.getId(), user);
-        if (status == Status.WAITING) {
-            startRace();
-        } else {
-            user.onStartRace();
+        if (hostParticipantId == null) {
+            hostParticipantId = user.getId();
         }
         return user;
+    }
+
+    public synchronized Map<String, Object> start(long requesterId) {
+        if (status != Status.WAITING) {
+            throw new IllegalStateException("The race is not waiting to start");
+        }
+        if (hostParticipantId == null || hostParticipantId != requesterId) {
+            throw new IllegalStateException("Only the lobby host can start the race");
+        }
+        if (humanCount() < MIN_HUMANS_TO_START) {
+            throw new IllegalStateException("At least two drivers must join before starting");
+        }
+        startRace();
+        return state();
     }
 
     public synchronized User updateProgress(long id, int typedCharacters, int errors) {
@@ -83,9 +97,6 @@ public final class Race implements RaceAPIRaceServer {
 
     public synchronized Map<String, Object> reset() {
         resetInternal();
-        if (humanCount() > 0) {
-            startRace();
-        }
         return state();
     }
 
@@ -95,7 +106,7 @@ public final class Race implements RaceAPIRaceServer {
 
     @Override
     public synchronized boolean isJoinable() {
-        return humanCount() < MAX_PARTICIPANTS - botSpeeds.size();
+        return status == Status.WAITING && humanCount() < MAX_PARTICIPANTS - botSpeeds.size();
     }
 
     @Override
@@ -105,6 +116,9 @@ public final class Race implements RaceAPIRaceServer {
         }
         User user = (User) participant;
         participants.put(user.getId(), user);
+        if (!user.isBot() && hostParticipantId == null) {
+            hostParticipantId = user.getId();
+        }
     }
 
     private void addBot(long id, String name, int color, int wordsPerMinute) {
@@ -167,6 +181,8 @@ public final class Race implements RaceAPIRaceServer {
         state.put("status", status.name());
         state.put("startedAt", startedAt == 0 ? null : startedAt);
         state.put("serverTime", System.currentTimeMillis());
+        state.put("hostParticipantId", hostParticipantId);
+        state.put("minimumParticipantsToStart", MIN_HUMANS_TO_START);
         state.put("trackLengthMeters", TRACK_LENGTH_METERS);
         state.put("wheelRadiusMeters", angleConverter.getRadius());
         state.put("stepAngleDegrees", angleConverter.getStepAngleDegrees());

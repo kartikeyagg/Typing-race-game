@@ -33,6 +33,7 @@ public final class TypingRaceServer {
         server.createContext("/api/health", this::health);
         server.createContext("/api/race/distances", this::distances);
         server.createContext("/api/race/participants", this::participants);
+        server.createContext("/api/race/start", this::start);
         server.createContext("/api/race/reset", this::reset);
         server.createContext("/api/race", this::raceState);
         server.createContext("/", this::staticFiles);
@@ -72,6 +73,24 @@ public final class TypingRaceServer {
         if (preflight(exchange)) return;
         if (!requireMethod(exchange, "POST")) return;
         sendJson(exchange, 200, race.reset());
+    }
+
+    private void start(HttpExchange exchange) throws IOException {
+        if (preflight(exchange)) return;
+        if (!requireMethod(exchange, "POST")) return;
+        try {
+            JsonNode request = readJson(exchange);
+            if (!request.has("participantId")) {
+                throw new IllegalArgumentException("participantId is required");
+            }
+            sendJson(exchange, 200, race.start(request.path("participantId").asLong()));
+        } catch (JsonProcessingException exception) {
+            sendError(exchange, 400, "Request body must be valid JSON");
+        } catch (IllegalArgumentException exception) {
+            sendError(exchange, 400, exception.getMessage());
+        } catch (IllegalStateException exception) {
+            sendError(exchange, 409, exception.getMessage());
+        }
     }
 
     private void participants(HttpExchange exchange) throws IOException {

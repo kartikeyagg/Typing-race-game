@@ -44,6 +44,16 @@ class TypingRaceServerTest {
                 "{\"name\":\"LAN Driver\",\"color\":\"#22D3EE\"}");
         assertEquals(201, joined.statusCode());
         long id = json.readTree(joined.body()).path("participantId").asLong();
+        assertEquals("WAITING", json.readTree(joined.body()).path("race").path("status").asText());
+
+        HttpResponse<String> guest = send("POST", "/api/race/participants",
+                "{\"name\":\"Second Driver\",\"color\":\"#F97316\"}");
+        assertEquals(201, guest.statusCode());
+
+        HttpResponse<String> started = send("POST", "/api/race/start",
+                "{\"participantId\":" + id + "}");
+        assertEquals(200, started.statusCode());
+        assertEquals("RUNNING", json.readTree(started.body()).path("status").asText());
 
         HttpResponse<String> updated = send("PUT", "/api/race/participants/" + id + "/progress",
                 "{\"typedCharacters\":40,\"errors\":1}");
