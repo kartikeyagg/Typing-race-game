@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#08101f">
+    <title>TypeShift — LAN Typing Race</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+    <div class="noise" aria-hidden="true"></div>
+    <header class="topbar">
+        <a class="brand" href="/" aria-label="TypeShift home">
+            <span class="brand-mark"><i></i><i></i><i></i></span>
+            <span>TYPE<span>SHIFT</span></span>
+        </a>
+        <div class="server-status">
+            <span class="pulse"></span>
+            <span>LAN SERVER</span>
+            <strong id="serverAddress">CONNECTING</strong>
+        </div>
+        <button class="ghost-button" id="copyApiButton" type="button">COPY API</button>
+    </header>
+
+    <main>
+        <section class="race-heading">
+            <div>
+                <p class="eyebrow">LIVE HEAT <span id="raceId">--------</span></p>
+                <h1>Precision wins<br><em>the straight.</em></h1>
+            </div>
+            <div class="race-meta">
+                <div><span>TRACK</span><strong>100 M</strong></div>
+                <div><span>RACE MODE</span><strong>LAN OPEN</strong></div>
+                <div><span>RACERS</span><strong id="racerCount">0</strong></div>
+            </div>
+        </section>
+
+        <section class="track-shell" aria-label="Race track">
+            <div class="track-header">
+                <div><span class="live-dot"></span><strong id="raceStatus">WAITING FOR DRIVER</strong></div>
+                <span class="track-hint">DISTANCE UPDATES LIVE</span>
+            </div>
+            <div class="track" id="track"></div>
+            <div class="track-footer">
+                <span>START</span>
+                <span class="track-scale"></span>
+                <span>FINISH</span>
+            </div>
+        </section>
+
+        <section class="cockpit">
+            <div class="metric-card accent">
+                <span>POSITION</span>
+                <strong id="positionMetric">—</strong>
+                <small>LIVE RANK</small>
+            </div>
+            <div class="metric-card">
+                <span>SPEED</span>
+                <strong><span id="wpmMetric">0</span><sup> WPM</sup></strong>
+                <small>WORDS / MIN</small>
+            </div>
+            <div class="metric-card">
+                <span>ACCURACY</span>
+                <strong><span id="accuracyMetric">100</span><sup>%</sup></strong>
+                <small>CLEAN INPUT</small>
+            </div>
+            <div class="metric-card motor-card">
+                <span>MOTOR OUTPUT</span>
+                <strong><span id="degreeMetric">0.0</span><sup>°</sup></strong>
+                <small id="stepMetric">0 STEPS · 1.8°</small>
+            </div>
+        </section>
+
+        <section class="typing-panel" id="typingPanel">
+            <div class="typing-topline">
+                <span>TYPE TO ACCELERATE</span>
+                <span><b id="distanceMetric">0.00</b> / 100 M</span>
+            </div>
+            <div class="passage" id="passage" aria-live="polite">
+                <span class="pending">Join the heat to load the race text.</span>
+            </div>
+            <div class="progress-rail"><span id="typingProgress"></span></div>
+            <div class="typing-footer">
+                <span><kbd>TAP HERE</kbd> THEN START TYPING</span>
+                <button type="button" id="restartButton">RESTART HEAT ↻</button>
+            </div>
+            <textarea id="typingInput" autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="Race typing input"></textarea>
+        </section>
+    </main>
+
+    <footer>
+        <span>TYPE<span>SHIFT</span> / LOCAL RACE SYSTEM</span>
+        <span>PORT 7894 · STEPPER READY</span>
+    </footer>
+
+    <div class="modal-backdrop" id="joinModal">
+        <form class="join-card" id="joinForm">
+            <p class="eyebrow">ENTER THE GRID</p>
+            <h2>Choose your driver.</h2>
+            <p class="join-copy">Everyone on this Wi-Fi races on the same track. Share the address shown below.</p>
+            <label for="driverName">DRIVER NAME</label>
+            <input id="driverName" name="name" maxlength="18" placeholder="e.g. NightShift" required autofocus>
+            <fieldset>
+                <legend>CAR COLOR</legend>
+                <div class="swatches">
+                    <label style="--swatch:#22d3ee"><input type="radio" name="color" value="#22D3EE" checked><span></span></label>
+                    <label style="--swatch:#f97316"><input type="radio" name="color" value="#F97316"><span></span></label>
+                    <label style="--swatch:#a78bfa"><input type="radio" name="color" value="#A78BFA"><span></span></label>
+                    <label style="--swatch:#34d399"><input type="radio" name="color" value="#34D399"><span></span></label>
+                    <label style="--swatch:#fb7185"><input type="radio" name="color" value="#FB7185"><span></span></label>
+                </div>
+            </fieldset>
+            <button class="primary-button" type="submit">JOIN RACE <span>→</span></button>
+            <p class="join-address" id="joinAddress">http://server-ip:7894</p>
+            <p class="form-error" id="formError" role="alert"></p>
+        </form>
+    </div>
+
+    <div class="toast" id="toast" role="status"></div>
+    <script src="/app.js" defer></script>
+</body>
+</html>
