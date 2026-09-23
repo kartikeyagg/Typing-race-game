@@ -20,6 +20,12 @@ Same Wi-Fi:    http://192.168.1.42:7894
 
 Open the local address on the server computer. Other participants connected to the same Wi-Fi open the printed `Same Wi-Fi` address. No separate client installation is required.
 
+## Shared waiting lobby
+
+Every driver joins the same waiting lobby before a heat. The first person to join is the lobby host. Once at least two human drivers are present, the host can select **Start Race**. A server-synchronized **3-2-1** countdown appears for every driver before the heat begins and typing unlocks. The typing passage stays locked while the lobby is waiting and during the countdown, and new drivers cannot join once the countdown begins.
+
+Use **Return to Lobby** after a heat to reset every connected driver and wait for the next start. The same host remains in control of the start button for subsequent heats.
+
 If other devices cannot connect, verify that they are on the same non-guest network and allow inbound TCP port `7894` through the server computer's firewall. Guest Wi-Fi commonly prevents devices from communicating with one another.
 
 The wheel radius is in metres and is fixed when the process starts. It can also be supplied with an environment variable:
@@ -78,8 +84,9 @@ Other endpoints:
 | `GET` | `/api/race` | Full race state, including the typing passage |
 | `GET` | `/api/race/distances` | Participant distances and motor output |
 | `POST` | `/api/race/participants` | Join with `{ "name": "Ada", "color": "#22D3EE" }` |
+| `POST` | `/api/race/start` | Lobby host starts the heat with `{ "participantId": 1001 }` |
 | `PUT` | `/api/race/participants/{id}/progress` | Report `{ "typedCharacters": 42, "errors": 1 }` |
-| `POST` | `/api/race/reset` | Restart the heat for every connected participant |
+| `POST` | `/api/race/reset` | Return every connected participant to the waiting lobby |
 
 ## Stepper conversion class
 

@@ -162,8 +162,8 @@ footer { width: min(1240px, calc(100% - 40px)); margin: 0 auto; height: 74px; bo
 
 .modal-backdrop { position: fixed; inset: 0; z-index: 20; display: grid; place-items: center; padding: 20px; background: rgba(3,8,16,.82); backdrop-filter: blur(14px); transition: opacity .25s; }
 .modal-backdrop.hidden { opacity: 0; pointer-events: none; }
-.join-card { width: min(440px, 100%); padding: 34px; border: 1px solid rgba(148,163,184,.22); border-radius: 14px; background: linear-gradient(145deg, #111e33, #0a1424); box-shadow: 0 30px 100px rgba(0,0,0,.6); }
-.join-card h2 { margin: 0 0 10px; font-size: 30px; letter-spacing: -.04em; }
+.join-card, .lobby-card { width: min(440px, 100%); padding: 34px; border: 1px solid rgba(148,163,184,.22); border-radius: 14px; background: linear-gradient(145deg, #111e33, #0a1424); box-shadow: 0 30px 100px rgba(0,0,0,.6); }
+.join-card h2, .lobby-card h2 { margin: 0 0 10px; font-size: 30px; letter-spacing: -.04em; }
 .join-copy { color: #8492aa; font-size: 13px; line-height: 1.65; margin: 0 0 25px; }
 .join-card > label, legend { display: block; margin-bottom: 8px; color: #77859c; font: 500 9px "DM Mono", monospace; letter-spacing: .14em; }
 .join-card > input { width: 100%; border: 1px solid #2a3850; border-radius: 7px; padding: 13px 14px; color: white; background: #081321; outline: 0; }
@@ -178,6 +178,24 @@ fieldset { border: 0; padding: 0; margin: 22px 0; }
 .primary-button:disabled { opacity: .55; cursor: wait; }
 .join-address { text-align: center; margin: 17px 0 0; color: #536078; font: 400 10px "DM Mono", monospace; }
 .form-error { min-height: 16px; margin: 10px 0 0; text-align: center; color: #fb7185; font-size: 11px; }
+.lobby-address-row { padding: 12px 14px; margin-bottom: 22px; border: 1px solid #26354b; border-radius: 7px; background: #081321; }
+.lobby-address-row span, .lobby-header span { display: block; color: #65738a; font: 500 8px "DM Mono", monospace; letter-spacing: .14em; }
+.lobby-address-row strong { display: block; margin-top: 5px; overflow: hidden; color: var(--cyan); font: 500 11px "DM Mono", monospace; text-overflow: ellipsis; white-space: nowrap; }
+.lobby-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 9px; }
+.lobby-header strong { color: #dce4ef; font: 500 11px "DM Mono", monospace; }
+.lobby-roster { min-height: 80px; max-height: 192px; margin-bottom: 20px; overflow-y: auto; border: 1px solid var(--line); border-radius: 8px; }
+.lobby-driver { display: flex; align-items: center; gap: 10px; min-height: 47px; padding: 0 13px; border-bottom: 1px solid var(--line); color: #cbd5e4; font-size: 12px; }
+.lobby-driver:last-child { border-bottom: 0; }
+.lobby-driver i { width: 9px; height: 9px; flex: 0 0 auto; border-radius: 50%; background: var(--driver-color); box-shadow: 0 0 10px var(--driver-color); }
+.lobby-driver span { margin-left: auto; color: #65738a; font: 500 8px "DM Mono", monospace; letter-spacing: .1em; }
+.lobby-note { min-height: 16px; margin: 11px 0 0; text-align: center; color: #65738a; font: 400 9px "DM Mono", monospace; letter-spacing: .04em; }
+.lobby-card .primary-button:disabled { cursor: not-allowed; }
+.countdown-overlay { position: fixed; inset: 0; z-index: 25; display: grid; place-content: center; justify-items: center; pointer-events: none; background: rgba(3,8,16,.72); backdrop-filter: blur(9px); }
+.countdown-overlay.hidden { display: none; }
+.countdown-overlay span { color: var(--cyan); font: 500 11px "DM Mono", monospace; letter-spacing: .24em; }
+.countdown-overlay strong { color: white; font: 800 clamp(110px, 24vw, 240px)/.9 "Manrope", sans-serif; letter-spacing: -.08em; text-shadow: 0 0 50px rgba(34,211,238,.35); animation: countdown-pulse .4s ease-out; }
+.countdown-overlay.go strong { color: var(--cyan); font-size: clamp(80px, 19vw, 180px); letter-spacing: -.05em; }
+@keyframes countdown-pulse { from { opacity: .2; transform: scale(1.35); } to { opacity: 1; transform: scale(1); } }
 .toast { position: fixed; left: 50%; bottom: 24px; z-index: 30; transform: translate(-50%, 20px); opacity: 0; pointer-events: none; padding: 11px 16px; border: 1px solid #2c3a51; border-radius: 7px; color: #dbe3ef; background: #101b2d; font: 500 10px "DM Mono", monospace; transition: .2s; }
 .toast.show { transform: translate(-50%, 0); opacity: 1; }
 
@@ -213,7 +231,7 @@ fieldset { border: 0; padding: 0; margin: 22px 0; }
     .passage { font-size: 16px; line-height: 1.7; }
     .typing-footer > span { font-size: 7px; }
     footer span:last-child { display: none; }
-    .join-card { padding: 27px 23px; }
+    .join-card, .lobby-card { padding: 27px 23px; }
 }
 
 @media (prefers-reduced-motion: reduce) {

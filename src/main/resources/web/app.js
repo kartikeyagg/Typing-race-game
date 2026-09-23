@@ -17,6 +17,15 @@ const elements = {
     joinForm: document.querySelector('#joinForm'),
     driverName: document.querySelector('#driverName'),
     formError: document.querySelector('#formError'),
+    lobbyModal: document.querySelector('#lobbyModal'),
+    lobbyMessage: document.querySelector('#lobbyMessage'),
+    lobbyAddress: document.querySelector('#lobbyAddress'),
+    lobbyCount: document.querySelector('#lobbyCount'),
+    lobbyRoster: document.querySelector('#lobbyRoster'),
+    lobbyNote: document.querySelector('#lobbyNote'),
+    startRace: document.querySelector('#startRaceButton'),
+    countdownOverlay: document.querySelector('#countdownOverlay'),
+    countdownValue: document.querySelector('#countdownValue'),
     serverAddress: document.querySelector('#serverAddress'),
     joinAddress: document.querySelector('#joinAddress'),
     copyApi: document.querySelector('#copyApiButton'),
@@ -32,7 +41,9 @@ const state = {
     sending: false,
     queued: false,
     pollTimer: null,
-    toastTimer: null
+    toastTimer: null,
+    countdownTimer: null,
+    countdownNumber: null
 };
 
 const api = async (path, options = {}) => {
@@ -61,6 +72,15 @@ function showToast(message) {
 
 function renderPassage() {
     if (!state.race?.passage) return;
+    if (state.race.status !== 'RUNNING' && state.race.status !== 'FINISHED') {
+        elements.passage.replaceChildren();
+        const waiting = document.createElement('span');
+        waiting.className = 'pending';
+        waiting.textContent = 'The race text will appear when the host starts the heat.';
+        elements.passage.append(waiting);
+        elements.typingProgress.style.width = '0%';
+        return;
+    }
     const passage = state.race.passage;
     const completed = state.typed.length;
     elements.passage.replaceChildren();
@@ -75,6 +95,67 @@ function renderPassage() {
     pending.textContent = passage.slice(completed + 1);
     elements.passage.append(correct, current, pending);
     elements.typingProgress.style.width = `${Math.min(100, completed / passage.length * 100)}%`;
+}
+
+function renderLobby(race) {
+    const humans = race.participants?.filter(participant => !participant.bot) || [];
+    const inLobby = Boolean(state.participantId) && race.status === 'WAITING';
+    elements.lobbyModal.classList.toggle('hidden', !inLobby);
+    if (!inLobby) return;
+
+    const isHost = race.hostParticipantId === state.participantId;
+    const minimum = race.minimumParticipantsToStart || 2;
+    setText(elements.lobbyCount, humans.length);
+    setText(elements.lobbyAddress, location.origin);
+    setText(elements.lobbyMessage, isHost
+        ? 'Share this address with everyone. Start the race when all drivers are here.'
+        : 'You are on the grid. The race will begin for everyone when the host starts it.');
+    elements.lobbyRoster.replaceChildren();
+    humans.forEach(participant => {
+        const row = document.createElement('div');
+        row.className = 'lobby-driver';
+        row.style.setProperty('--driver-color', participant.color);
+        const dot = document.createElement('i');
+        const name = document.createElement('strong');
+        name.textContent = participant.name;
+        const role = document.createElement('span');
+        role.textContent = participant.id === race.hostParticipantId ? 'HOST' : 'READY';
+        row.append(dot, name, role);
+        elements.lobbyRoster.append(row);
+    });
+
+    const canStart = isHost && humans.length >= minimum;
+    elements.startRace.hidden = !isHost;
+    elements.startRace.disabled = !canStart;
+    setText(elements.lobbyNote, isHost
+        ? (canStart ? 'Everyone here? Start when ready.' : `Waiting for ${minimum - humans.length} more driver${minimum - humans.length === 1 ? '' : 's'}.`)
+        : 'Waiting for the lobby host to start.');
+}
+
+function renderCountdown(race, previousStatus) {
+    clearTimeout(state.countdownTimer);
+    if (race.status === 'COUNTDOWN') {
+        const remaining = Math.max(1, Math.ceil((race.countdownEndsAt - race.serverTime) / 1000));
+        elements.countdownOverlay.classList.remove('hidden', 'go');
+        if (remaining !== state.countdownNumber) {
+            state.countdownNumber = remaining;
+            setText(elements.countdownValue, remaining);
+            elements.countdownValue.style.animation = 'none';
+            void elements.countdownValue.offsetWidth;
+            elements.countdownValue.style.animation = '';
+        }
+        return;
+    }
+    state.countdownNumber = null;
+    if (previousStatus === 'COUNTDOWN' && race.status === 'RUNNING') {
+        elements.countdownOverlay.classList.remove('hidden');
+        elements.countdownOverlay.classList.add('go');
+        setText(elements.countdownValue, 'GO!');
+        state.countdownTimer = setTimeout(() => elements.countdownOverlay.classList.add('hidden'), 500);
+        return;
+    }
+    elements.countdownOverlay.classList.add('hidden');
+    elements.countdownOverlay.classList.remove('go');
 }
 
 function makeLane(participant) {
@@ -116,11 +197,13 @@ function makeLane(participant) {
 }
 
 function renderRace(race) {
+    const previousStatus = state.race?.status;
     state.race = { ...state.race, ...race };
     setText(elements.raceId, race.raceId || '--------');
-    setText(elements.raceStatus, race.status === 'RUNNING' ? 'RACE IN PROGRESS' : race.status === 'FINISHED' ? 'HEAT COMPLETE' : 'WAITING FOR DRIVER');
+    setText(elements.raceStatus, race.status === 'COUNTDOWN' ? 'RACE STARTING' : race.status === 'RUNNING' ? 'RACE IN PROGRESS' : race.status === 'FINISHED' ? 'HEAT COMPLETE' : 'DRIVERS IN LOBBY');
     const humans = race.participants?.filter(participant => !participant.bot).length || 0;
     setText(elements.racerCount, humans);
+    elements.typingInput.disabled = race.status !== 'RUNNING';
     elements.track.replaceChildren();
     if (!race.participants?.length) {
         const empty = document.createElement('div');
@@ -133,6 +216,11 @@ function renderRace(race) {
 
     const me = race.participants?.find(participant => participant.id === state.participantId);
     if (me) {
+        if (race.status === 'WAITING') {
+            state.typed = '';
+            state.errors = 0;
+            elements.typingInput.value = '';
+        }
         setText(elements.position, ordinal(me.position));
         setText(elements.wpm, Math.round(me.wpm));
         setText(elements.accuracy, me.accuracyPercent.toFixed(1));
@@ -141,6 +229,9 @@ function renderRace(race) {
         setText(elements.distance, me.distanceMeters.toFixed(2));
         if (me.finished) showToast(`FINISHED ${ordinal(me.position)} · ${Math.round(me.wpm)} WPM`);
     }
+    renderLobby(state.race);
+    renderCountdown(state.race, previousStatus);
+    renderPassage();
 }
 
 async function sendProgress() {
@@ -167,7 +258,7 @@ async function sendProgress() {
 }
 
 function handleTyping() {
-    if (!state.participantId || !state.race?.passage || state.typed.length >= state.race.passage.length) return;
+    if (!state.participantId || state.race?.status !== 'RUNNING' || !state.race?.passage || state.typed.length >= state.race.passage.length) return;
     const entered = elements.typingInput.value;
     if (state.race.passage.startsWith(entered) && entered.length >= state.typed.length) {
         state.typed = entered;
@@ -185,7 +276,9 @@ function handleTyping() {
 async function poll() {
     try {
         const race = await api('/api/race/distances');
+        const previousStatus = state.race?.status;
         renderRace(race);
+        if (previousStatus === 'COUNTDOWN' && race.status === 'RUNNING') elements.typingInput.focus();
     } catch (error) {
         setText(elements.raceStatus, 'SERVER OFFLINE');
     } finally {
@@ -210,7 +303,6 @@ async function bootstrap() {
             state.participantId = null;
             sessionStorage.removeItem('participantId');
         }
-        renderPassage();
         renderRace(race);
         poll();
     } catch (error) {
@@ -236,13 +328,28 @@ elements.joinForm.addEventListener('submit', async event => {
         state.errors = 0;
         elements.typingInput.value = '';
         elements.joinModal.classList.add('hidden');
-        renderPassage();
         renderRace(response.race);
-        setTimeout(() => elements.typingInput.focus(), 250);
     } catch (error) {
         setText(elements.formError, error.message);
     } finally {
         submit.disabled = false;
+    }
+});
+
+elements.startRace.addEventListener('click', async () => {
+    if (!state.participantId) return;
+    elements.startRace.disabled = true;
+    try {
+        const race = await api('/api/race/start', {
+            method: 'POST',
+            body: JSON.stringify({ participantId: state.participantId })
+        });
+        renderRace(race);
+        elements.typingInput.focus();
+        showToast('COUNTDOWN STARTED');
+    } catch (error) {
+        showToast(error.message);
+        renderLobby(state.race);
     }
 });
 
@@ -260,10 +367,8 @@ elements.restart.addEventListener('click', async event => {
         state.typed = '';
         state.errors = 0;
         elements.typingInput.value = '';
-        renderPassage();
         renderRace(race);
-        elements.typingInput.focus();
-        showToast('NEW HEAT STARTED FOR EVERYONE');
+        showToast('EVERYONE RETURNED TO THE LOBBY');
     } catch (error) {
         showToast(error.message);
     }
@@ -279,5 +384,8 @@ elements.copyApi.addEventListener('click', async () => {
     }
 });
 
-window.addEventListener('beforeunload', () => clearTimeout(state.pollTimer));
+window.addEventListener('beforeunload', () => {
+    clearTimeout(state.pollTimer);
+    clearTimeout(state.countdownTimer);
+});
 bootstrap();

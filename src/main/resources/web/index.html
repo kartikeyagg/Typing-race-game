@@ -85,7 +85,7 @@
             <div class="progress-rail"><span id="typingProgress"></span></div>
             <div class="typing-footer">
                 <span><kbd>TAP HERE</kbd> THEN START TYPING</span>
-                <button type="button" id="restartButton">RESTART HEAT ↻</button>
+                <button type="button" id="restartButton">RETURN TO LOBBY ↻</button>
             </div>
             <textarea id="typingInput" autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="Race typing input"></textarea>
         </section>
@@ -117,6 +117,30 @@
             <p class="join-address" id="joinAddress">http://server-ip:7894</p>
             <p class="form-error" id="formError" role="alert"></p>
         </form>
+    </div>
+
+    <div class="modal-backdrop hidden" id="lobbyModal">
+        <section class="lobby-card" aria-labelledby="lobbyTitle">
+            <p class="eyebrow">SHARED WAITING AREA</p>
+            <h2 id="lobbyTitle">Drivers are joining.</h2>
+            <p class="join-copy" id="lobbyMessage">Share this address with everyone, then wait for the host to start the race.</p>
+            <div class="lobby-address-row">
+                <span>RACE ADDRESS</span>
+                <strong id="lobbyAddress">http://server-ip:7894</strong>
+            </div>
+            <div class="lobby-header">
+                <span>DRIVERS IN LOBBY</span>
+                <strong id="lobbyCount">0</strong>
+            </div>
+            <div class="lobby-roster" id="lobbyRoster" aria-live="polite"></div>
+            <button class="primary-button" id="startRaceButton" type="button">START RACE <span>→</span></button>
+            <p class="lobby-note" id="lobbyNote">Waiting for at least two drivers.</p>
+        </section>
+    </div>
+
+    <div class="countdown-overlay hidden" id="countdownOverlay" aria-live="assertive" aria-atomic="true">
+        <span>GET READY</span>
+        <strong id="countdownValue">3</strong>
     </div>
 
     <div class="toast" id="toast" role="status"></div>
