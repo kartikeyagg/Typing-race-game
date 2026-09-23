@@ -22,7 +22,7 @@ Open the local address on the server computer. Other participants connected to t
 
 ## Shared waiting lobby
 
-Every driver joins the same waiting lobby before a heat. The first person to join is the lobby host. Once at least two human drivers are present, the host can select **Start Race** to begin the heat for everyone at the same time. The typing passage stays locked while the lobby is waiting, and new drivers cannot join a heat that is already running.
+Every driver joins the same waiting lobby before a heat. The first person to join is the lobby host. Once at least two human drivers are present, the host can select **Start Race**. A server-synchronized **3-2-1** countdown appears for every driver before the heat begins and typing unlocks. The typing passage stays locked while the lobby is waiting and during the countdown, and new drivers cannot join once the countdown begins.
 
 Use **Return to Lobby** after a heat to reset every connected driver and wait for the next start. The same host remains in control of the start button for subsequent heats.
 

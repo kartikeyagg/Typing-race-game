@@ -19,18 +19,29 @@ public final class Race implements RaceAPIRaceServer {
             + "who can stay calm, accurate, and fast.";
     private static final int MAX_PARTICIPANTS = 12;
     private static final int MIN_HUMANS_TO_START = 2;
+    private static final long DEFAULT_COUNTDOWN_MILLIS = 3_000;
 
     private final Map<Long, User> participants = new LinkedHashMap<>();
     private final Map<Long, Integer> botSpeeds = new LinkedHashMap<>();
     private final AtomicLong ids = new AtomicLong(1000);
     private final StepperAngleConverter angleConverter;
+    private final long countdownMillis;
     private String raceId = newRaceId();
     private Long hostParticipantId;
+    private long countdownEndsAt;
     private long startedAt;
     private Status status = Status.WAITING;
 
     public Race(StepperAngleConverter angleConverter) {
+        this(angleConverter, DEFAULT_COUNTDOWN_MILLIS);
+    }
+
+    public Race(StepperAngleConverter angleConverter, long countdownMillis) {
+        if (countdownMillis < 0) {
+            throw new IllegalArgumentException("Countdown duration cannot be negative");
+        }
         this.angleConverter = angleConverter;
+        this.countdownMillis = countdownMillis;
         addBot(-1, "Apex", 0xF97316, 46);
         addBot(-2, "Volt", 0xA78BFA, 58);
         addBot(-3, "Drift", 0x34D399, 38);
@@ -63,11 +74,14 @@ public final class Race implements RaceAPIRaceServer {
         if (humanCount() < MIN_HUMANS_TO_START) {
             throw new IllegalStateException("At least two drivers must join before starting");
         }
-        startRace();
+        countdownEndsAt = System.currentTimeMillis() + countdownMillis;
+        status = Status.COUNTDOWN;
+        advanceCountdown();
         return state();
     }
 
     public synchronized User updateProgress(long id, int typedCharacters, int errors) {
+        advanceCountdown();
         User user = participants.get(id);
         if (user == null || user.isBot()) {
             throw new IllegalArgumentException("Participant not found");
@@ -81,6 +95,7 @@ public final class Race implements RaceAPIRaceServer {
     }
 
     public synchronized Map<String, Object> state() {
+        advanceCountdown();
         refreshBots();
         Map<String, Object> state = baseState();
         state.put("passage", PASSAGE);
@@ -89,6 +104,7 @@ public final class Race implements RaceAPIRaceServer {
     }
 
     public synchronized Map<String, Object> distances() {
+        advanceCountdown();
         refreshBots();
         Map<String, Object> state = baseState();
         state.put("participants", participantSnapshots());
@@ -128,7 +144,8 @@ public final class Race implements RaceAPIRaceServer {
     }
 
     private void startRace() {
-        startedAt = System.currentTimeMillis();
+        startedAt = countdownEndsAt > 0 ? countdownEndsAt : System.currentTimeMillis();
+        countdownEndsAt = 0;
         status = Status.RUNNING;
         for (User participant : participants.values()) {
             participant.onStartRace();
@@ -137,6 +154,7 @@ public final class Race implements RaceAPIRaceServer {
 
     private void resetInternal() {
         raceId = newRaceId();
+        countdownEndsAt = 0;
         startedAt = 0;
         status = Status.WAITING;
         for (User participant : participants.values()) {
@@ -156,6 +174,12 @@ public final class Race implements RaceAPIRaceServer {
             bot.updateProgress((int) Math.floor(baseCharacters * variation), 0, PASSAGE.length());
         }
         updateStatus();
+    }
+
+    private void advanceCountdown() {
+        if (status == Status.COUNTDOWN && System.currentTimeMillis() >= countdownEndsAt) {
+            startRace();
+        }
     }
 
     private void updateStatus() {
@@ -180,6 +204,7 @@ public final class Race implements RaceAPIRaceServer {
         state.put("raceId", raceId);
         state.put("status", status.name());
         state.put("startedAt", startedAt == 0 ? null : startedAt);
+        state.put("countdownEndsAt", countdownEndsAt == 0 ? null : countdownEndsAt);
         state.put("serverTime", System.currentTimeMillis());
         state.put("hostParticipantId", hostParticipantId);
         state.put("minimumParticipantsToStart", MIN_HUMANS_TO_START);
@@ -256,5 +281,5 @@ public final class Race implements RaceAPIRaceServer {
         return Math.round(value * factor) / factor;
     }
 
-    private enum Status { WAITING, RUNNING, FINISHED }
+    private enum Status { WAITING, COUNTDOWN, RUNNING, FINISHED }
 }

@@ -24,7 +24,7 @@ class TypingRaceServerTest {
 
     @BeforeEach
     void startServer() throws Exception {
-        server = new TypingRaceServer("127.0.0.1", 0, new Race(new StepperAngleConverter(0.03)));
+        server = new TypingRaceServer("127.0.0.1", 0, new Race(new StepperAngleConverter(0.03), 0));
         server.start();
         baseUrl = "http://127.0.0.1:" + server.getPort();
     }

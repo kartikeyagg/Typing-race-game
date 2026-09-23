@@ -24,6 +24,8 @@ const elements = {
     lobbyRoster: document.querySelector('#lobbyRoster'),
     lobbyNote: document.querySelector('#lobbyNote'),
     startRace: document.querySelector('#startRaceButton'),
+    countdownOverlay: document.querySelector('#countdownOverlay'),
+    countdownValue: document.querySelector('#countdownValue'),
     serverAddress: document.querySelector('#serverAddress'),
     joinAddress: document.querySelector('#joinAddress'),
     copyApi: document.querySelector('#copyApiButton'),
@@ -39,7 +41,9 @@ const state = {
     sending: false,
     queued: false,
     pollTimer: null,
-    toastTimer: null
+    toastTimer: null,
+    countdownTimer: null,
+    countdownNumber: null
 };
 
 const api = async (path, options = {}) => {
@@ -128,6 +132,32 @@ function renderLobby(race) {
         : 'Waiting for the lobby host to start.');
 }
 
+function renderCountdown(race, previousStatus) {
+    clearTimeout(state.countdownTimer);
+    if (race.status === 'COUNTDOWN') {
+        const remaining = Math.max(1, Math.ceil((race.countdownEndsAt - race.serverTime) / 1000));
+        elements.countdownOverlay.classList.remove('hidden', 'go');
+        if (remaining !== state.countdownNumber) {
+            state.countdownNumber = remaining;
+            setText(elements.countdownValue, remaining);
+            elements.countdownValue.style.animation = 'none';
+            void elements.countdownValue.offsetWidth;
+            elements.countdownValue.style.animation = '';
+        }
+        return;
+    }
+    state.countdownNumber = null;
+    if (previousStatus === 'COUNTDOWN' && race.status === 'RUNNING') {
+        elements.countdownOverlay.classList.remove('hidden');
+        elements.countdownOverlay.classList.add('go');
+        setText(elements.countdownValue, 'GO!');
+        state.countdownTimer = setTimeout(() => elements.countdownOverlay.classList.add('hidden'), 500);
+        return;
+    }
+    elements.countdownOverlay.classList.add('hidden');
+    elements.countdownOverlay.classList.remove('go');
+}
+
 function makeLane(participant) {
     const lane = document.createElement('div');
     lane.className = `lane${participant.id === state.participantId ? ' me' : ''}`;
@@ -167,9 +197,10 @@ function makeLane(participant) {
 }
 
 function renderRace(race) {
+    const previousStatus = state.race?.status;
     state.race = { ...state.race, ...race };
     setText(elements.raceId, race.raceId || '--------');
-    setText(elements.raceStatus, race.status === 'RUNNING' ? 'RACE IN PROGRESS' : race.status === 'FINISHED' ? 'HEAT COMPLETE' : 'DRIVERS IN LOBBY');
+    setText(elements.raceStatus, race.status === 'COUNTDOWN' ? 'RACE STARTING' : race.status === 'RUNNING' ? 'RACE IN PROGRESS' : race.status === 'FINISHED' ? 'HEAT COMPLETE' : 'DRIVERS IN LOBBY');
     const humans = race.participants?.filter(participant => !participant.bot).length || 0;
     setText(elements.racerCount, humans);
     elements.typingInput.disabled = race.status !== 'RUNNING';
@@ -199,6 +230,7 @@ function renderRace(race) {
         if (me.finished) showToast(`FINISHED ${ordinal(me.position)} · ${Math.round(me.wpm)} WPM`);
     }
     renderLobby(state.race);
+    renderCountdown(state.race, previousStatus);
     renderPassage();
 }
 
@@ -246,7 +278,7 @@ async function poll() {
         const race = await api('/api/race/distances');
         const previousStatus = state.race?.status;
         renderRace(race);
-        if (previousStatus === 'WAITING' && race.status === 'RUNNING') elements.typingInput.focus();
+        if (previousStatus === 'COUNTDOWN' && race.status === 'RUNNING') elements.typingInput.focus();
     } catch (error) {
         setText(elements.raceStatus, 'SERVER OFFLINE');
     } finally {
@@ -314,7 +346,7 @@ elements.startRace.addEventListener('click', async () => {
         });
         renderRace(race);
         elements.typingInput.focus();
-        showToast('RACE STARTED');
+        showToast('COUNTDOWN STARTED');
     } catch (error) {
         showToast(error.message);
         renderLobby(state.race);
@@ -352,5 +384,8 @@ elements.copyApi.addEventListener('click', async () => {
     }
 });
 
-window.addEventListener('beforeunload', () => clearTimeout(state.pollTimer));
+window.addEventListener('beforeunload', () => {
+    clearTimeout(state.pollTimer);
+    clearTimeout(state.countdownTimer);
+});
 bootstrap();
